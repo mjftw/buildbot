@@ -52,8 +52,9 @@ class GitPoller(base.PollingChangeSource, StateMixin, GitMixin):
     def __init__(self, repourl, branches=None, branch=None, workdir=None, pollInterval=10 * 60,
                  gitbin="git", usetimestamps=True, category=None, project=None, pollinterval=-2,
                  fetch_refspec=None, encoding="utf-8", name=None, pollAtLaunch=False,
-                 buildPushesWithNoCommits=False, only_tags=False, sshPrivateKey=None,
-                 sshHostKey=None, sshKnownHosts=None, pollRandomDelayMin=0, pollRandomDelayMax=0):
+                 buildPushesWithNoCommits=False, only_tags=False, include_tags=False,
+                 sshPrivateKey=None, sshHostKey=None, sshKnownHosts=None, pollRandomDelayMin=0,
+                 pollRandomDelayMax=0):
 
         # for backward compatibility; the parameter used to be spelled with 'i'
         if pollinterval != -2:
@@ -81,6 +82,17 @@ class GitPoller(base.PollingChangeSource, StateMixin, GitMixin):
                 branches = lambda ref: ref.startswith('refs/tags/')  # noqa: E731
             else:
                 branches = ['master']
+
+        if include_tags:
+            if only_tags:
+                config.error("GitPoller: can't specify only_tags and include_tags")
+            else:
+                if callable(branches):
+                    branches_func = branches
+                    branches = lambda ref: ref.startswith('refs/tags/') or branches_func(ref)
+                else:
+                    base_branches = branches
+                    branches = lambda ref: ref.startswith('refs/tags/') or ref in base_branches
 
         self.repourl = repourl
         self.branches = branches

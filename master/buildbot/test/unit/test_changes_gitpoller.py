@@ -1842,6 +1842,32 @@ class TestGitPollerConstructor(unittest.TestCase, config.ConfigErrorsMixin):
                 "can't specify only_tags and branch/branches"):
             gitpoller.GitPoller("/tmp/git.git", only_tags=True, branch='bad')
 
+    def test_include_tags_True(self):
+        poller = gitpoller.GitPoller("/tmp/git.git", include_tags=True)
+        self.assertIsNotNone(poller.branches)
+
+    def test_branch_and_include_tags(self):
+        poller = gitpoller.GitPoller("/tmp/git.git", include_tags=True, branch='good')
+        self.assertIn('good', poller.branches)
+
+    def test_branches_and_include_tags(self):
+        branches_poller = gitpoller.GitPoller("/tmp/git.git", branches=['good', 'bad', 'ugly'])
+        poller = gitpoller.GitPoller("/tmp/git.git", include_tags=True,
+            branches=['good', 'bad', 'ugly'])
+        for branch in branches_poller.branches:
+            self.assertIn(branch, poller.branches)
+
+    def test_branches_lambda_and_include_tags(self):
+        poller = gitpoller.GitPoller("/tmp/git.git", include_tags=True,
+            branches=lambda ref: ref == 'good')
+        for branch in ['good', 'ref/tags/mytag']:
+            self.assertIn(branch, poller.branches)
+
+    def test_include_tags_and_only_tags(self):
+        with self.assertRaisesConfigError(
+                "can't specify only_tags and include_tags"):
+            gitpoller.GitPoller("/tmp/git.git", include_tags=True, only_tags=True)
+
     def test_gitbin_default(self):
         poller = gitpoller.GitPoller("/tmp/git.git")
         self.assertEqual(poller.gitbin, "git")
